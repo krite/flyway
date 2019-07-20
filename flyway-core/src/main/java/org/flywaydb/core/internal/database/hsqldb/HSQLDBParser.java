@@ -59,16 +59,25 @@ public class HSQLDBParser extends Parser {
         ));
     }
 
+    // TODO maybe include this in interface and export to other parsers?
+    private Set<String> getModifiableObjects() {
+        return new HashSet<>(Arrays.asList(
+                "CONSTRAINT", "TABLE", "COLUMN" // TODO add more modifiable objects here
+        ));
+    }
+
     @Override
     protected void adjustBlockDepth(ParserContext context, List<Token> tokens, Token keyword) {
         int lastKeywordIndex = getLastKeywordIndex(tokens);
         Token previousKeyword = lastKeywordIndex >= 0 ? tokens.get(lastKeywordIndex) : null;
 
+        String previousText = previousKeyword != null ? previousKeyword.getText() : "";
         if ("BEGIN".equals(keyword.getText())
-                || (("IF".equals(keyword.getText()) || "FOR".equals(keyword.getText()) || "CASE".equals(keyword.getText()))
-                && previousKeyword != null && !"END".equals(previousKeyword.getText()))) {
+                || ((("IF".equals(keyword.getText()) && !getModifiableObjects().contains(previousText))
+                || "FOR".equals(keyword.getText()) || "CASE".equals(keyword.getText()))
+                && !"END".equals(previousText))) {
             context.increaseBlockDepth();
-        } else if (("EACH".equals(keyword.getText()) || "SQLEXCEPTION".equals(keyword.getText())) && previousKeyword != null && "FOR".equals(previousKeyword.getText())) {
+        } else if (("EACH".equals(keyword.getText()) || "SQLEXCEPTION".equals(keyword.getText())) && "FOR".equals(previousText)) {
             context.decreaseBlockDepth();
         } else if ("END".equals(keyword.getText())) {
             context.decreaseBlockDepth();
